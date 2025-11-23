@@ -3,6 +3,6 @@ langchain-ibm==0.1.7
 langchain-core==0.2.43
 ibm-watsonx-ai==1.0.8
 python-dotenv==1.0.0
-flask==2.3.0
-chroma-client==0.3.21
-pdf2image==1.16.3
+flask==2.2.2
+werkzeug==2.2.2
+chromadb==0.4.0
