@@ -1,3 +1,1 @@
-# RAG Project
-
-Learning Retrieval Augmented Generation with IBM Watsonx AI
+# RAG Project - Learning Repository
