@@ -1,45 +1,35 @@
-from ibm_watsonx_ai.foundation_models import ModelInference
-from ibm_watsonx_ai.metanames import GenTextParamsMetaNames as GenParams
-from langchain.prompts import PromptTemplate
+from ollama import Client
 import json
+import re
 
-params = {
-    GenParams.DECODING_METHOD: "greedy",
-    GenParams.MAX_NEW_TOKENS: 256,
+client = Client(host='http://localhost:11434')
+MODEL = 'mistral'
+
+print("=== JSON OUTPUT PARSING ===")
+template = """
+Analyze this review and respond in JSON format:
+{
+  "sentiment": "positive/negative/neutral",
+  "score": "1-10",
+  "summary": "one sentence"
 }
 
-model = ModelInference(
-    model_id="ibm/granite-3-8b-instruct",
-    params=params,
-    credentials={"url": "https://us-south.ml.cloud.ibm.com"},
-    project_id="skills-network"
-)
-
-# JSON Output Example
-print("=== JSON OUTPUT ===")
-template = """
-Analyze this review and respond in JSON format with these fields:
-- sentiment (Positive/Negative/Neutral)
-- score (1-10)
-- summary (one sentence)
-
-Review: {review}
-
+Review: "Great product, arrived quickly but packaging was poor"
 JSON Response:
 """
 
-prompt = PromptTemplate.from_template(template)
-formatted = prompt.format(review="The product works great but arrived late")
+response = client.generate(model=MODEL, prompt=template, stream=False)
+response_text = response['response']
 
-response = model.generate(formatted)
-result_text = response['results'][0]['generated_text']
+print(f"Raw Response: {response_text}\n")
 
-print(f"Response: {result_text}")
-
-# Try to parse JSON if model returns it
+# Try to extract JSON
 try:
-    json_str = result_text[result_text.find('{'):result_text.rfind('}')+1]
-    parsed = json.loads(json_str)
-    print(f"\nParsed JSON: {json.dumps(parsed, indent=2)}")
-except:
-    print("(Could not parse JSON from response)")
+    json_match = re.search(r'\{.*\}', response_text, re.DOTALL)
+    if json_match:
+        json_str = json_match.group()
+        parsed = json.loads(json_str)
+        print("Parsed JSON:")
+        print(json.dumps(parsed, indent=2))
+except json.JSONDecodeError:
+    print("Could not parse JSON (normal for smaller models)")
