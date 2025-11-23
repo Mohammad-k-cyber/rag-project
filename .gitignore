@@ -1,0 +1,5 @@
+ibm_rag/
+__pycache__/
+*.pyc
+.env
+.DS_Store
