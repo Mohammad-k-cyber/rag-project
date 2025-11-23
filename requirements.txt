@@ -1,8 +1,11 @@
+
 langchain==0.2.11
 langchain-ibm==0.1.7
 langchain-core==0.2.43
 ibm-watsonx-ai==1.0.8
 python-dotenv==1.0.0
-flask==2.2.2
+flask==2.3.0
 werkzeug==2.2.2
-chromadb==0.4.0
+ollama==0.1.25
+pytest==9.0.1
+flake8==7.0.0
