@@ -1,39 +1,76 @@
 from flask import Flask, request, jsonify
-from ibm_watsonx_ai.foundation_models import ModelInference
-from ibm_watsonx_ai.metanames import GenTextParamsMetaNames as GenParams
-from langchain.prompts import PromptTemplate
+from ollama import Client
+import time
 
 app = Flask(__name__)
+client = Client(host='http://localhost:11434')
+MODEL = 'mistral'
 
-params = {
-    GenParams.DECODING_METHOD: "greedy",
-    GenParams.MAX_NEW_TOKENS: 256,
-}
-
-model = ModelInference(
-    model_id="ibm/granite-3-8b-instruct",
-    params=params,
-    credentials={"url": "https://us-south.ml.cloud.ibm.com"},
-    project_id="skills-network"
-)
-
-# Route 1: Simple question-answer
 @app.route('/ask', methods=['POST'])
 def ask():
+    """Answer a question"""
     data = request.json
-    question = data.get('question')
+    question = data.get('question', 'What is AI?')
     
-    template = "Answer this question: {question}"
-    prompt = PromptTemplate.from_template(template)
-    formatted = prompt.format(question=question)
+    start = time.time()
+    response = client.generate(
+        model=MODEL,
+        prompt=f"Answer briefly: {question}",
+        stream=False
+    )
+    elapsed = time.time() - start
     
-    response = model.generate(formatted)
-    return jsonify({"answer": response['results'][0]['generated_text']})
+    return jsonify({
+        "answer": response['response'],
+        "time_seconds": round(elapsed, 2),
+        "model": MODEL
+    })
 
-# Route 2: Health check
+@app.route('/summarize', methods=['POST'])
+def summarize():
+    """Summarize text"""
+    data = request.json
+    text = data.get('text', '')
+    
+    if not text:
+        return jsonify({"error": "No text provided"}), 400
+    
+    response = client.generate(
+        model=MODEL,
+        prompt=f"Summarize in 2 sentences:\n{text}",
+        stream=False
+    )
+    
+    return jsonify({
+        "summary": response['response'],
+        "model": MODEL
+    })
+
 @app.route('/health', methods=['GET'])
 def health():
-    return jsonify({"status": "healthy"})
+    """Health check"""
+    return jsonify({
+        "status": "healthy",
+        "model": MODEL,
+        "host": "http://localhost:11434"
+    })
+
+@app.route('/', methods=['GET'])
+def home():
+    """API documentation"""
+    return jsonify({
+        "api": "RAG Learning API",
+        "endpoints": {
+            "/ask (POST)": "Ask a question",
+            "/summarize (POST)": "Summarize text",
+            "/health (GET)": "Health check"
+        },
+        "example": {
+            "curl": "curl -X POST http://localhost:5000/ask -H 'Content-Type: application/json' -d '{\"question\": \"What is RAG?\"}'",
+            "python": "requests.post('http://localhost:5000/ask', json={'question': 'What is RAG?'})"
+        }
+    })
 
 if __name__ == '__main__':
-    app.run(debug=True)
+    print(f"🚀 Starting Flask app with {MODEL} model")
+    app.run(debug=True, host='0.0.0.0', port=5000)
