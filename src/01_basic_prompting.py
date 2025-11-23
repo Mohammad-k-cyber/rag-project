@@ -1,53 +1,60 @@
-from ibm_watsonx_ai.foundation_models import ModelInference
-from ibm_watsonx_ai.metanames import GenTextParamsMetaNames as GenParams
+from ollama import Client
+import time
 
-# Initialize model using direct API (more reliable)
-params = {
-    GenParams.DECODING_METHOD: "greedy",
-    GenParams.MAX_NEW_TOKENS: 256,
-}
+client = Client(host='http://localhost:11434')
 
-model = ModelInference(
-    model_id="ibm/granite-3-8b-instruct",
-    params=params,
-    credentials={
-        "url": "https://us-south.ml.cloud.ibm.com",
-    },
-    project_id="skills-network"
-)
+# Use mistral model - perfect for your GPU
+MODEL = 'mistral'
+
+def measure_time(func):
+    """Decorator to measure execution time"""
+    def wrapper(*args, **kwargs):
+        start = time.time()
+        result = func(*args, **kwargs)
+        elapsed = time.time() - start
+        return result, elapsed
+    return wrapper
+
+@measure_time
+def generate_response(prompt):
+    response = client.generate(model=MODEL, prompt=prompt, stream=False)
+    return response['response']
 
 print("=== ZERO-SHOT PROMPTING ===")
-basic_prompt = "What is Retrieval Augmented Generation?"
-response = model.generate(basic_prompt)
-print(f"Response: {response['results'][0]['generated_text']}\n")
+answer, elapsed = generate_response("What is Retrieval Augmented Generation?")
+print(f"Response: {answer}")
+print(f"Time: {elapsed:.2f}s\n")
 
 print("=== ONE-SHOT PROMPTING ===")
 one_shot = """
 Example: What is Machine Learning? 
-Answer: Machine Learning is a subset of AI...
+Answer: Machine Learning is a subset of AI that enables computers to learn from data.
 
 Now answer: What is Deep Learning?
 """
-response = model.generate(one_shot)
-print(f"Response: {response['results'][0]['generated_text']}\n")
+answer, elapsed = generate_response(one_shot)
+print(f"Response: {answer}")
+print(f"Time: {elapsed:.2f}s\n")
 
 print("=== FEW-SHOT PROMPTING ===")
 few_shot = """
 Examples:
-Q: What is NLP? A: Natural Language Processing is a field of AI...
-Q: What is Computer Vision? A: Computer Vision enables machines to see...
+Q: What is NLP? A: Natural Language Processing enables computers to understand human language.
+Q: What is Computer Vision? A: Computer Vision enables machines to see and analyze images.
 
 Q: What is Reinforcement Learning?
 """
-response = model.generate(few_shot)
-print(f"Response: {response['results'][0]['generated_text']}\n")
+answer, elapsed = generate_response(few_shot)
+print(f"Response: {answer}")
+print(f"Time: {elapsed:.2f}s\n")
 
 print("=== CHAIN-OF-THOUGHT ===")
-cot_prompt = """
+cot = """
 A store has 20 apples. They sell 7 apples and receive 5 more.
 How many apples are there now?
 
 Think step by step:
 """
-response = model.generate(cot_prompt)
-print(f"Response: {response['results'][0]['generated_text']}")
+answer, elapsed = generate_response(cot)
+print(f"Response: {answer}")
+print(f"Time: {elapsed:.2f}s")
