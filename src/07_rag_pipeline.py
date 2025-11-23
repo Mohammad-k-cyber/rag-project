@@ -24,18 +24,21 @@ for i, doc in enumerate(documents, 1):
     print(f"  {i}. {doc[:60]}...")
 
 # Step 2: Simple retrieval (keyword matching for now)
+
+
 def retrieve_relevant_docs(query, docs, top_k=2):
     """Simple keyword-based retrieval"""
     scores = []
     query_words = query.lower().split()
-    
+
     for doc in docs:
         score = sum(1 for word in query_words if word in doc.lower())
         scores.append((doc, score))
-    
+
     # Sort by score and return top-k
     ranked = sorted(scores, key=lambda x: x[1], reverse=True)
     return [doc for doc, score in ranked[:top_k] if score > 0]
+
 
 # Step 3: Test RAG
 queries = [
@@ -46,20 +49,20 @@ queries = [
 
 for query in queries:
     print(f"\n📝 Query: {query}")
-    
+
     # Retrieve
     retrieved = retrieve_relevant_docs(query, documents)
     print(f"  Retrieved {len(retrieved)} documents:")
     for doc in retrieved:
         print(f"    - {doc[:50]}...")
-    
+
     # Generate with context
     context = "\n".join(retrieved)
     prompt = f"""Context: {context}
 
 Question: {query}
 Answer:"""
-    
+
     response = client.generate(model='mistral', prompt=prompt, stream=False)
     answer = response['response'][:150]
     print(f"  Answer: {answer}...")

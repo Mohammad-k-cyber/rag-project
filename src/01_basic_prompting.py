@@ -6,6 +6,7 @@ client = Client(host='http://localhost:11434')
 # Use mistral model - perfect for your GPU
 MODEL = 'mistral'
 
+
 def measure_time(func):
     """Decorator to measure execution time"""
     def wrapper(*args, **kwargs):
@@ -15,10 +16,12 @@ def measure_time(func):
         return result, elapsed
     return wrapper
 
+
 @measure_time
 def generate_response(prompt):
     response = client.generate(model=MODEL, prompt=prompt, stream=False)
     return response['response']
+
 
 print("=== ZERO-SHOT PROMPTING ===")
 answer, elapsed = generate_response("What is Retrieval Augmented Generation?")
@@ -27,7 +30,7 @@ print(f"Time: {elapsed:.2f}s\n")
 
 print("=== ONE-SHOT PROMPTING ===")
 one_shot = """
-Example: What is Machine Learning? 
+Example: What is Machine Learning?
 Answer: Machine Learning is a subset of AI that enables computers to learn from data.
 
 Now answer: What is Deep Learning?

@@ -6,12 +6,13 @@ app = Flask(__name__)
 client = Client(host='http://localhost:11434')
 MODEL = 'mistral'
 
+
 @app.route('/ask', methods=['POST'])
 def ask():
     """Answer a question"""
     data = request.json
     question = data.get('question', 'What is AI?')
-    
+
     start = time.time()
     response = client.generate(
         model=MODEL,
@@ -19,32 +20,34 @@ def ask():
         stream=False
     )
     elapsed = time.time() - start
-    
+
     return jsonify({
         "answer": response['response'],
         "time_seconds": round(elapsed, 2),
         "model": MODEL
     })
 
+
 @app.route('/summarize', methods=['POST'])
 def summarize():
     """Summarize text"""
     data = request.json
     text = data.get('text', '')
-    
+
     if not text:
         return jsonify({"error": "No text provided"}), 400
-    
+
     response = client.generate(
         model=MODEL,
         prompt=f"Summarize in 2 sentences:\n{text}",
         stream=False
     )
-    
+
     return jsonify({
         "summary": response['response'],
         "model": MODEL
     })
+
 
 @app.route('/health', methods=['GET'])
 def health():
@@ -54,6 +57,7 @@ def health():
         "model": MODEL,
         "host": "http://localhost:11434"
     })
+
 
 @app.route('/', methods=['GET'])
 def home():
@@ -70,6 +74,7 @@ def home():
             "python": "requests.post('http://localhost:5000/ask', json={'question': 'What is RAG?'})"
         }
     })
+
 
 if __name__ == '__main__':
     print(f"🚀 Starting Flask app with {MODEL} model")
