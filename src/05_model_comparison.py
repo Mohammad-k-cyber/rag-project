@@ -1,25 +1,24 @@
-from langchain_ibm import ChatWatsonx
+from ibm_watsonx_ai.foundation_models import ModelInference
+from ibm_watsonx_ai.metanames import GenTextParamsMetaNames as GenParams
+
+params = {
+    GenParams.DECODING_METHOD: "greedy",
+    GenParams.MAX_NEW_TOKENS: 200,
+}
 
 # Initialize different models
-granite = ChatWatsonx(
+granite = ModelInference(
     model_id="ibm/granite-3-8b-instruct",
-    url="https://us-south.ml.cloud.ibm.com",
-    project_id="skills-network",
-    params={"max_new_tokens": 256}
+    params=params,
+    credentials={"url": "https://us-south.ml.cloud.ibm.com"},
+    project_id="skills-network"
 )
 
-llama = ChatWatsonx(
-    model_id="meta-llama/llama-3-2-11b-vision-instruct",
-    url="https://us-south.ml.cloud.ibm.com",
-    project_id="skills-network",
-    params={"max_new_tokens": 256}
-)
-
-mixtral = ChatWatsonx(
-    model_id="mistralai/mistral-large",
-    url="https://us-south.ml.cloud.ibm.com",
-    project_id="skills-network",
-    params={"max_new_tokens": 256}
+llama = ModelInference(
+    model_id="meta-llama/llama-3-2-1b-instruct",
+    params=params,
+    credentials={"url": "https://us-south.ml.cloud.ibm.com"},
+    project_id="skills-network"
 )
 
 # Test prompt
@@ -28,13 +27,9 @@ prompt = "Explain what RAG is in one sentence"
 print("=== MODEL COMPARISON ===\n")
 
 print("GRANITE Response:")
-response = granite.invoke(prompt)
-print(f"{response.content}\n")
+response = granite.generate(prompt)
+print(f"{response['results'][0]['generated_text']}\n")
 
 print("LLAMA3 Response:")
-response = llama.invoke(prompt)
-print(f"{response.content}\n")
-
-print("MIXTRAL Response:")
-response = mixtral.invoke(prompt)
-print(f"{response.content}")
+response = llama.generate(prompt)
+print(f"{response['results'][0]['generated_text']}")

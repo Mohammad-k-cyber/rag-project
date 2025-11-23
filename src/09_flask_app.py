@@ -1,23 +1,21 @@
 from flask import Flask, request, jsonify
-from langchain_ibm import ChatWatsonx
+from ibm_watsonx_ai.foundation_models import ModelInference
+from ibm_watsonx_ai.metanames import GenTextParamsMetaNames as GenParams
 from langchain.prompts import PromptTemplate
-from langchain_core.output_parsers import JsonOutputParser
-from pydantic import BaseModel, Field
 
 app = Flask(__name__)
 
-model = ChatWatsonx(
+params = {
+    GenParams.DECODING_METHOD: "greedy",
+    GenParams.MAX_NEW_TOKENS: 256,
+}
+
+model = ModelInference(
     model_id="ibm/granite-3-8b-instruct",
-    url="https://us-south.ml.cloud.ibm.com",
-    project_id="skills-network",
-    params={"max_new_tokens": 256}
+    params=params,
+    credentials={"url": "https://us-south.ml.cloud.ibm.com"},
+    project_id="skills-network"
 )
-
-class AIResponse(BaseModel):
-    answer: str = Field(description="The AI's response")
-    confidence: str = Field(description="Confidence level")
-
-json_parser = JsonOutputParser(pydantic_object=AIResponse)
 
 # Route 1: Simple question-answer
 @app.route('/ask', methods=['POST'])
@@ -29,31 +27,10 @@ def ask():
     prompt = PromptTemplate.from_template(template)
     formatted = prompt.format(question=question)
     
-    response = model.invoke(formatted)
-    return jsonify({"answer": response.content})
+    response = model.generate(formatted)
+    return jsonify({"answer": response['results'][0]['generated_text']})
 
-# Route 2: Structured JSON response
-@app.route('/analyze', methods=['POST'])
-def analyze():
-    data = request.json
-    text = data.get('text')
-    
-    template = """
-    Analyze this text and respond in JSON:
-    {format_instructions}
-    
-    Text: {text}
-    """
-    prompt = PromptTemplate.from_template(template)
-    formatted = prompt.format(
-        text=text,
-        format_instructions=json_parser.get_format_instructions()
-    )
-    
-    response = model.invoke(formatted)
-    return jsonify({"analysis": response.content})
-
-# Route 3: Health check
+# Route 2: Health check
 @app.route('/health', methods=['GET'])
 def health():
     return jsonify({"status": "healthy"})

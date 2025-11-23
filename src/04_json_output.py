@@ -1,40 +1,45 @@
-from langchain_ibm import ChatWatsonx
+from ibm_watsonx_ai.foundation_models import ModelInference
+from ibm_watsonx_ai.metanames import GenTextParamsMetaNames as GenParams
 from langchain.prompts import PromptTemplate
-from langchain_core.output_parsers import JsonOutputParser
-from pydantic import BaseModel, Field
+import json
 
-model = ChatWatsonx(
+params = {
+    GenParams.DECODING_METHOD: "greedy",
+    GenParams.MAX_NEW_TOKENS: 256,
+}
+
+model = ModelInference(
     model_id="ibm/granite-3-8b-instruct",
-    url="https://us-south.ml.cloud.ibm.com",
-    project_id="skills-network",
-    params={"max_new_tokens": 256}
+    params=params,
+    credentials={"url": "https://us-south.ml.cloud.ibm.com"},
+    project_id="skills-network"
 )
 
-# Define output structure
-class ReviewAnalysis(BaseModel):
-    sentiment: str = Field(description="Positive, Negative, or Neutral")
-    score: int = Field(description="Score from 1-10")
-    summary: str = Field(description="One sentence summary")
-
-json_parser = JsonOutputParser(pydantic_object=ReviewAnalysis)
-
-# Create chain with JSON output
+# JSON Output Example
+print("=== JSON OUTPUT ===")
 template = """
-Analyze this review and respond in JSON format:
-{format_instructions}
+Analyze this review and respond in JSON format with these fields:
+- sentiment (Positive/Negative/Neutral)
+- score (1-10)
+- summary (one sentence)
 
 Review: {review}
+
+JSON Response:
 """
 
 prompt = PromptTemplate.from_template(template)
-chain = prompt | model | json_parser
+formatted = prompt.format(review="The product works great but arrived late")
 
-result = chain.invoke({
-    "review": "The product works great but arrived late",
-    "format_instructions": json_parser.get_format_instructions()
-})
+response = model.generate(formatted)
+result_text = response['results'][0]['generated_text']
 
-print("Parsed JSON Output:")
-print(f"Sentiment: {result['sentiment']}")
-print(f"Score: {result['score']}")
-print(f"Summary: {result['summary']}")
+print(f"Response: {result_text}")
+
+# Try to parse JSON if model returns it
+try:
+    json_str = result_text[result_text.find('{'):result_text.rfind('}')+1]
+    parsed = json.loads(json_str)
+    print(f"\nParsed JSON: {json.dumps(parsed, indent=2)}")
+except:
+    print("(Could not parse JSON from response)")
